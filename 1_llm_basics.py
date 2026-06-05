@@ -1,18 +1,22 @@
 from openai import OpenAI
 from dotenv import load_dotenv
+import json
 
 load_dotenv()
 
 client = OpenAI()
 
 # ---- 1. Simplest possible API call ----
-# result = client.responses.create(
-#     model="gpt-4o",
-#     input="What is the square root of 49?"
-# )
+result = client.responses.create(
+    model="gpt-4o",
+    input="What is the square root of 49?"
+)
 
 # ---- 2. What does the full response object look like? ----
 # print(result)
+
+# ---- 2.5. What does the raw JSON OpenAI response look like? ----
+# print(json.dumps(result.to_dict(), indent=2))
 
 # # ---- 3. Extract just the text ----
 # print(result.output_text)
@@ -47,13 +51,13 @@ client = OpenAI()
 # print(f"Total tokens: {result.usage.total_tokens}")
 
 # # ---- 7. Streaming ----
-stream = client.responses.create(
-    model="gpt-4o",
-    instructions="You are a helpful assistant.",
-    input="Tell me a short story about a robot.",
-    stream=True
-)
+# stream = client.responses.create(
+#     model="gpt-4o",
+#     instructions="You are a helpful assistant.",
+#     input="Tell me a short story about a robot.",
+#     stream=True
+# )
 
-for event in stream:
-    if hasattr(event, 'delta'):
-        print(event.delta, end="", flush=True)
+# for event in stream:
+#     if hasattr(event, 'delta'):
+#         print(event.delta, end="", flush=True)

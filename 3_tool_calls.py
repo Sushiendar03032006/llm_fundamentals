@@ -6,26 +6,30 @@ load_dotenv()
 
 client = OpenAI()
 
-# ---- 1. The problem - model doesn't know real time data ----
-result = client.responses.create(
-    model="gpt-4o",
-    input="What is the current weather in Bangalore?"
-)
 
-print(result.output_text)
-# Output: "I don't have access to real time weather data..."
+# ---- 0. The problem - model has no access to real-time data ----
+# result = client.responses.create(
+#     model="gpt-4o",
+#     input="What is the current weather in Bangalore?"
+# )
+# print(result.output_text)
+# # Output: "I don't have access to real-time weather data."
 
-# ---- 2. Define a function the model can use ----
+
+# ---- 1. Define the actual Python function ----
 def get_weather(city: str):
-    # In real life this would call a weather API
-    # For now we're faking it
-    return f"The weather in {city} is 28 degrees and sunny."
+    return {
+        "city": city,
+        "temperature": 28,
+        "unit": "celsius",
+        "condition": "sunny"
+    }
 
-# ---- 3. Define the tool - this is how you describe your function to the model ----
+# ---- 2. Describe the function to the model (the tool definition) ----
 tools = [
     {
         "type": "function",
-        "name": "get_weather",                        # moved outside "function" block
+        "name": "get_weather",
         "description": "Get the current weather for a given city",
         "parameters": {
             "type": "object",
@@ -33,50 +37,51 @@ tools = [
                 "city": {
                     "type": "string",
                     "description": "The city to get weather for"
-                }
+                } 
             },
             "required": ["city"]
         }
     }
 ]
 
-# ---- 4. The full loop ----
 
-# Step 1 - send the question + tools to the model
+# ---- 3. Step 1 - Send the question and tools to the model ----
+input_messages = [{"role": "user", "content": "What is the current weather in Delhi?"}]
+
 result = client.responses.create(
     model="gpt-4o",
-    input="What is the current weather in Bangalore?",
+    input=input_messages,
     tools=tools
 )
 
-# Step 2 - model doesn't answer, it tells us to call a function
-print(result.output)
-# Notice status is 'requires_action' not 'completed'
-print(result.status)
+# print(json.dumps(result.to_dict(), indent=2))
 
-# Step 3 - we extract what function the model wants to call and with what arguments
+
+# # ---- 4. Extract the function name and arguments ----
 tool_call = result.output[0]
 function_name = tool_call.name
 function_args = json.loads(tool_call.arguments)
 
-print(f"Model wants to call: {function_name}")
-print(f"With arguments: {function_args}")
 
-# Step 4 - we actually run the function ourselves
+# # ---- 5. Run the function ourselves ----
 function_result = get_weather(function_args["city"])
-print(f"Function returned: {function_result}")
 
-# Step 5 - send everything back to the model so it can give the final answer
+print(f"🔧 Tool called: {function_name}({', '.join(f'{k}={v}' for k, v in function_args.items())})")
+print(f"📦 Raw result: {function_result}")
+
+
+# # ---- 6. Build the full history and send everything back ----
+input_messages.append(tool_call)
+input_messages.append({
+    "type": "function_call_output",
+    "call_id": tool_call.call_id,
+    "output": json.dumps(function_result)
+})
+
 final_result = client.responses.create(
     model="gpt-4o",
-    previous_response_id=result.id,        # replaces manually appending messages
-    input=[{
-        "type": "function_call_output",    # replaces "role": "tool"
-        "call_id": tool_call.call_id,
-        "output": function_result
-    }],
+    input=input_messages,
     tools=tools
 )
 
-print(final_result.output_text)
-# Output: "The current weather in Bangalore is 28 degrees and sunny."
+print(f"\n💬 Final answer: {final_result.output_text}")
