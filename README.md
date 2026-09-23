@@ -10,9 +10,6 @@
 
 <img width="1152" height="502" alt="image" src="https://github.com/user-attachments/assets/9a52a175-212a-466c-a779-d5351350b236" />
 
-![Uploading image.png…]()
-
-
 
 
 
